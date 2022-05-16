@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Made By jumps-are-op
+# This software is under GPLv3 and comes with ABSOLUTE NO WARRANTY
+
+displayPage(){
+	export COLUMNS=129
+	man "$1" | dmenu -l 20 -fn "monospace:size=13" &>/dev/null || exit 0
+}
+
+main(){
+
+	# choose page interactively
+	if [ "$#" = 0 ];then
+		page="$(true|dmenu -p "Man Page:")" || exit 0
+		man "$page" &>/dev/null
+		case "$?" in
+			0)displayPage "$page";;
+			*)
+				true|dmenu -p "No manual entry for $page" &>/dev/null
+				exit
+				;;
+		esac
+
+	# One page
+	elif [ "$#" = 1 ];then
+		man "$1" &>/dev/null
+		case "$?" in
+			0)displayPage "$1";;
+			*)
+				true|dmenu -p "No manual entry for $1" &>/dev/null
+				exit
+				;;
+		esac
+
+	# Multi page
+	else
+		i=0
+		pages=( "$@" )
+		for page in "${pages[@]}";do
+			((i++))
+			[ "$skip" = 1 ] || {
+				# Check if page even exist
+				man "$page" &>/dev/null
+				case "$?" in
+					0)displayPage "$page";;
+					*)true|dmenu -p "No manual entry for $1" &>/dev/null || exit 1;;
+				esac
+			}
+			skip=0
+
+			[ "$i" -ge "$#" ] && continue
+			in="$(echo -e "view\nskip\nquit" | dmenu -p "next: ${pages[i]}")" || exit 1
+			case "$in" in
+				"view"|"");;
+				"quit")exit 0;;
+				*)skip=1;;
+			esac
+		done
+	fi
+}
+main "$@"
